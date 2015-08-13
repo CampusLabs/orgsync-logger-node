@@ -1,0 +1,16 @@
+{
+  "name": "orgsync-logger",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/orgsync/orgsync-logger-node"
+  },
+  "version": "1.0.0",
+  "dependencies": {
+    "chalk": "1.1.0",
+    "underscore": "1.8.3"
+  },
+  "scripts": {
+    "test": "npm install && node test.js"
+  }
+}
