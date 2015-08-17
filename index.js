@@ -5,13 +5,14 @@ var os = require('os');
 var path = require('path');
 
 var DEFAULT_CONFIG = {
-  name: os.hostname(),
   colors: true,
-  metrics: true
+  metrics: true,
+  name: os.hostname()
 };
 
 var config = DEFAULT_CONFIG;
 var maxIndex = Infinity;
+var sync = false;
 
 var LEVELS = ['error', 'info', 'debug'];
 
@@ -20,12 +21,14 @@ var COLORS = {
   debug: 'yellow'
 };
 
-var HANDLE_ERROR = function (er) { if (er) throw er; };
+var CB = function (er) { if (er) throw er; };
 
 var write = function (type, str) {
   str += '\n';
   if (!config.dir) return process.stdout.write(str);
-  fs.appendFile(path.resolve(config.dir, type + '.log'), str, HANDLE_ERROR);
+  var target = path.resolve(config.dir, type + '.log');
+  if (sync) return fs.appendFileSync(target, str);
+  fs.appendFile(target, str, CB);
 };
 
 var log = function (level, index, msg) {
@@ -62,6 +65,10 @@ exports.time = function (cb) {
   var start = Date.now();
   cb(function (name) { metric('time', name, Date.now() - start); });
 };
+
+exports.sync = function () { sync = true; };
+
+exports.async = function () { sync = false; };
 
 exports.config = function (_config) {
   config = _.extend({}, DEFAULT_CONFIG, _config);
