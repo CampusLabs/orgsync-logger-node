@@ -12,7 +12,8 @@ var DEFAULT_CONFIG = {
 
 var config = DEFAULT_CONFIG;
 var maxIndex = Infinity;
-var sync = false;
+
+var streams = {};
 
 var LEVELS = ['error', 'info', 'debug'];
 
@@ -21,14 +22,16 @@ var COLORS = {
   debug: 'yellow'
 };
 
-var CB = function (er) { if (er) throw er; };
+var getStream = function (target) {
+  return streams[target] ||
+    (streams[target] = fs.createWriteStream(target, {flags: 'a'}));
+};
 
 var write = function (type, str) {
   str += '\n';
   if (!config.dir) return process.stdout.write(str);
   var target = path.resolve(config.dir, type + '.log');
-  if (sync) return fs.appendFileSync(target, str);
-  fs.appendFile(target, str, CB);
+  getStream(target).write(str);
 };
 
 var log = function (level, index, msg) {
@@ -65,10 +68,6 @@ exports.time = function (cb) {
   var start = Date.now();
   cb(function (name) { metric('time', name, Date.now() - start); });
 };
-
-exports.sync = function () { sync = true; };
-
-exports.async = function () { sync = false; };
 
 exports.config = function (_config) {
   config = _.extend({}, DEFAULT_CONFIG, _config);

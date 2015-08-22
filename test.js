@@ -26,3 +26,6 @@ log.mark('mark_metric');
 log.gauge('gauge_metric', 10);
 log.duration('duration_metric', 100);
 log.time(function (done) { done('time_metric'); });
+
+// Make sure we can write to a file in the exit callback.
+process.on('exit', function () { log.info('exit test'); });
