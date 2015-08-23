@@ -82,7 +82,7 @@ exports.close = function (cb) {
   closed = true;
   var completed = 0;
   var total = Object.keys(streams).length;
-  var done = function () { if (++completed === total) cb(); };
+  var done = function () { if (++completed === total && cb) cb(); };
   for (var name in streams) streams[name].on('finish', done).end();
 };
 
