@@ -14,6 +14,7 @@ var config = DEFAULT_CONFIG;
 var maxIndex = Infinity;
 
 var streams = {};
+var closed = false;
 
 var LEVELS = ['error', 'info', 'debug'];
 
@@ -31,6 +32,7 @@ var write = function (type, str) {
   str += '\n';
   if (!config.dir) return process.stdout.write(str);
   var target = path.resolve(config.dir, type + '.log');
+  if (closed) return fs.appendFileSync(target, str);
   getStream(target).write(str);
 };
 
@@ -74,6 +76,14 @@ exports.config = function (_config) {
   chalk.enabled = !config.dir && config.colors;
   maxIndex = _.indexOf(LEVELS, config.level);
   if (maxIndex === -1) maxIndex = Infinity;
+};
+
+exports.close = function (cb) {
+  closed = true;
+  var completed = 0;
+  var total = Object.keys(streams).length;
+  var done = function () { if (++completed === total) cb(); };
+  for (var name in streams) streams[name].on('finish', done).end();
 };
 
 exports.config(config);

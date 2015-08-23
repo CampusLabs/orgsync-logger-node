@@ -29,3 +29,8 @@ log.time(function (done) { done('time_metric'); });
 
 // Make sure we can write to a file in the exit callback.
 process.on('exit', function () { log.info('exit test'); });
+process.on('uncaughtException', function () {
+  log.info('error test');
+  log.close(process.exit.bind(process));
+});
+throw new Error();
