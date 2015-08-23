@@ -14,6 +14,7 @@ var config = DEFAULT_CONFIG;
 var maxIndex = Infinity;
 
 var streams = {};
+var sync = false;
 var closed = false;
 
 var LEVELS = ['error', 'info', 'debug'];
@@ -32,7 +33,7 @@ var write = function (type, str) {
   str += '\n';
   if (!config.dir) return process.stdout.write(str);
   var target = path.resolve(config.dir, type + '.log');
-  if (closed) return fs.appendFileSync(target, str);
+  if (sync || closed) return fs.appendFileSync(target, str);
   getStream(target).write(str);
 };
 
@@ -78,7 +79,12 @@ exports.config = function (_config) {
   if (maxIndex === -1) maxIndex = Infinity;
 };
 
+exports.sync = function () { sync = true; };
+
+exports.async = function () { sync = false; };
+
 exports.close = function (cb) {
+  if (closed) return cb && cb();
   closed = true;
   var completed = 0;
   var total = Object.keys(streams).length;
