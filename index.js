@@ -29,7 +29,7 @@ var getStream = function (target) {
 var write = function (type, str) {
   str += '\n';
   var dir = exports.config.dir;
-  if (!dir) return process.stdout.write(str);
+  if (!dir) return process[type === 'error' ? 'stderr' : 'stdout'].write(str);
   var target = path.resolve(dir, type + '.log');
   if (sync || closed) return fs.appendFileSync(target, str);
   getStream(target).write(str);
