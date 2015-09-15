@@ -14,11 +14,13 @@ var streams = {};
 var sync = false;
 var closed = false;
 
-var LEVELS = ['error', 'info', 'debug'];
+var LEVELS = ['error', 'warn', 'success', 'info', 'debug'];
 
 var COLORS = {
-  error: 'red',
-  debug: 'yellow'
+  debug: chalk.grey,
+  error: chalk.red,
+  success: chalk.green,
+  warn: chalk.yellow
 };
 
 var getStream = function (target) {
@@ -41,7 +43,7 @@ var log = function (level, index, msg) {
   var name = ' [' + config.name + '] ';
   msg = iso + name + level.toUpperCase() + ' ' + msg;
   var color = !config.dir && config.colors !== false && COLORS[level];
-  write(level, color ? chalk[color](msg) : msg);
+  write(level, color ? color(msg) : msg);
 };
 
 _.each(LEVELS, function (level, index) {
