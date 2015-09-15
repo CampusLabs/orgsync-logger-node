@@ -38,8 +38,10 @@ var write = function (type, str) {
 };
 
 var log = function (level, index, msg) {
-  var iso = (new Date()).toISOString();
   var config = exports.config;
+  var max = config.level;
+  if (max && LEVELS.indexOf(level) > LEVELS.indexOf(max)) return;
+  var iso = (new Date()).toISOString();
   var name = ' [' + config.name + '] ';
   msg = iso + name + level.toUpperCase() + ' ' + msg;
   var color = !config.dir && config.colors !== false && COLORS[level];

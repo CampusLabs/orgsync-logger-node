@@ -13,6 +13,7 @@ log.time(function (done) { done('time_metric'); });
 
 log.config = {name: 'test2', level: 'error', colors: false, metrics: false};
 log.error('type=error name=test2 color=default');
+log.warn('SHOULD NOT SHOW');
 log.time(function (done) { done('SHOULD NOT SHOW'); });
 
 log.config = {name: 'test3', dir: 'log'};
