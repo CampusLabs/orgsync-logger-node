@@ -4,6 +4,8 @@ var fs = require('fs');
 var os = require('os');
 var path = require('path');
 
+chalk.enabled = true;
+
 exports.config = {
   colors: true,
   metrics: true,
