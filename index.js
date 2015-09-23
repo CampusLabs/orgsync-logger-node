@@ -78,11 +78,12 @@ exports.time = function (cb) {
 
 exports.sync = function () { sync = true; };
 
-exports.async = function () { sync = false; };
+exports.async = function () { if (!closed) sync = false; };
 
 exports.close = function (cb) {
   if (closed) return;
   closed = true;
+  sync = true;
   var completed = 0;
   var total = Object.keys(streams).length;
   var done = function () { if (++completed === total && cb) cb(); };
