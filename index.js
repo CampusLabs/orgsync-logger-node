@@ -3,6 +3,8 @@ var chalk = require('chalk');
 var fs = require('fs');
 var os = require('os');
 var path = require('path');
+var SDC = require('statsd-client');
+var url = require('url');
 
 chalk.enabled = true;
 
@@ -15,6 +17,7 @@ exports.config = {
 var streams = {};
 var sync = false;
 var closed = false;
+var sdc;
 
 var LEVELS = ['error', 'warn', 'success', 'info', 'debug'];
 
@@ -25,9 +28,22 @@ var COLORS = {
   warn: chalk.yellow
 };
 
+var SDC_MAP = {mark: 'set', gauge: 'gauge', time: 'timing'};
+
 var getStream = function (target) {
   return streams[target] ||
     (streams[target] = fs.createWriteStream(target, {flags: 'a'}));
+};
+
+var getSdc = function () {
+  var statsdUrl = exports.config.statsdUrl;
+  if (sdc || !statsdUrl) return sdc;
+  var parsed = url.parse(statsdUrl);
+  return sdc = new SDC({
+    tcp: parsed.protocol === 'tcp:',
+    host: parsed.hostname,
+    port: parsed.port
+  });
 };
 
 var write = function (type, str) {
@@ -56,6 +72,8 @@ _.each(LEVELS, function (level, index) {
 
 var metric = function (type, name, metric) {
   if (exports.config.metrics === false) return;
+  var sdc = getSdc();
+  if (sdc) sdc[SDC_MAP[type]](name, metric);
   write('metrics', JSON.stringify({
     '@timestamp': (new Date()).toISOString(),
     app_name: exports.config.name,
@@ -73,7 +91,7 @@ exports.duration = _.partial(metric, 'time');
 
 exports.time = function (cb) {
   var start = Date.now();
-  cb(function (name) { metric('time', name, Date.now() - start); });
+  cb(function (name) { exports.duration(name, Date.now() - start); });
 };
 
 exports.sync = function () { sync = true; };
@@ -88,4 +106,5 @@ exports.close = function (cb) {
   var total = Object.keys(streams).length;
   var done = function () { if (++completed === total && cb) cb(); };
   for (var name in streams) streams[name].on('finish', done).end();
+  if (sdc) sdc.close();
 };
