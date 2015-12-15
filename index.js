@@ -40,6 +40,7 @@ var getSdc = function () {
   if (sdc || !statsdUrl) return sdc;
   var parsed = url.parse(statsdUrl);
   return sdc = new SDC({
+    prefix: exports.config.name,
     tcp: parsed.protocol === 'tcp:',
     host: parsed.hostname,
     port: parsed.port
