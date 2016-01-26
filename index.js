@@ -72,9 +72,9 @@ _.each(LEVELS, function (level, index) {
 });
 
 var metric = function (type, name, metric) {
-  if (exports.config.metrics === false) return;
   var sdc = getSdc();
   if (sdc) sdc[SDC_MAP[type]](name, metric);
+  if (exports.config.metrics === false) return;
   write('metrics', JSON.stringify({
     '@timestamp': (new Date()).toISOString(),
     app_name: exports.config.name,
