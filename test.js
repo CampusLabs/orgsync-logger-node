@@ -27,6 +27,13 @@ log.gauge('gauge_metric', 10);
 log.duration('duration_metric', 100);
 log.time(function (done) { done('time_metric'); });
 
+log.config = {name: 'test4', json: true};
+log.error('type=error name=test color=red');
+log.warn('type=warn name=test color=yellow');
+log.success('type=success name=test color=green');
+log.info('type=info name=test color=default');
+log.debug('type=debug name=test color=grey');
+
 // Make sure we can write to a file in the exit callback.
 process.on('exit', function () { log.info('exit test'); });
 process.on('uncaughtException', function () {

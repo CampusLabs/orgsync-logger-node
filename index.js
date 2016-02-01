@@ -10,8 +10,11 @@ chalk.enabled = true;
 
 exports.config = {
   colors: true,
+  dir: null,
+  json: false,
   metrics: true,
-  name: os.hostname()
+  name: os.hostname(),
+  statsdUrl: null
 };
 
 var streams = {};
@@ -56,15 +59,23 @@ var write = function (type, str) {
   getStream(target).write(str);
 };
 
-var log = function (level, index, msg) {
+const log = (level, index, message) => {
   var config = exports.config;
   var max = config.level;
   if (max && LEVELS.indexOf(level) > LEVELS.indexOf(max)) return;
   var iso = (new Date()).toISOString();
-  var name = ' [' + config.name + '] ';
-  msg = iso + name + level.toUpperCase() + ' ' + msg;
+  var name = config.name;
+  if (config.json) {
+    return write(level, JSON.stringify({
+      '@timestamp': iso,
+      name,
+      level,
+      message
+    }));
+  }
+  message = `${iso} [${name}] ${level.toUpperCase()} ${message}`;
   var color = !config.dir && config.colors !== false && COLORS[level];
-  write(level, color ? color(msg) : msg);
+  write(level, color ? color(message) : message);
 };
 
 _.each(LEVELS, function (level, index) {
