@@ -1,10 +1,13 @@
-var _ = require('underscore');
-var chalk = require('chalk');
-var fs = require('fs');
-var os = require('os');
-var path = require('path');
-var SDC = require('statsd-client');
-var url = require('url');
+'use strict';
+
+const _ = require('underscore');
+const chalk = require('chalk');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const SDC = require('statsd-client');
+const superagent = require('superagent');
+const url = require('url');
 
 chalk.enabled = true;
 
@@ -17,31 +20,32 @@ exports.config = {
   statsdUrl: null
 };
 
-var streams = {};
-var sync = false;
-var closed = false;
-var sdc;
+const streams = {};
+let sync = false;
+let closed = false;
+let sdc;
 
-var LEVELS = ['error', 'warn', 'success', 'info', 'debug'];
+const LEVELS = ['error', 'warn', 'success', 'info', 'debug'];
 
-var COLORS = {
+const COLORS = {
   debug: chalk.grey,
   error: chalk.red,
   success: chalk.green,
   warn: chalk.yellow
 };
 
-var SDC_MAP = {mark: 'set', gauge: 'gauge', time: 'timing'};
+const SDC_MAP = {mark: 'set', gauge: 'gauge', time: 'timing'};
 
-var getStream = function (target) {
-  return streams[target] ||
-    (streams[target] = fs.createWriteStream(target, {flags: 'a'}));
-};
+const DATADOG_EVENTS_API_URL = 'https://app.datadoghq.com/api/v1/events';
 
-var getSdc = function () {
-  var statsdUrl = exports.config.statsdUrl;
+const getStream = target =>
+  streams[target] ||
+  (streams[target] = fs.createWriteStream(target, {flags: 'a'}));
+
+const getSdc = () => {
+  const statsdUrl = exports.config.statsdUrl;
   if (sdc || !statsdUrl) return sdc;
-  var parsed = url.parse(statsdUrl);
+  const parsed = url.parse(statsdUrl);
   return sdc = new SDC({
     prefix: exports.config.name,
     tcp: parsed.protocol === 'tcp:',
@@ -50,21 +54,21 @@ var getSdc = function () {
   });
 };
 
-var write = function (type, str) {
+const write = (type, str) => {
   str += '\n';
-  var dir = exports.config.dir;
+  const dir = exports.config.dir;
   if (!dir) return process[type === 'error' ? 'stderr' : 'stdout'].write(str);
-  var target = path.resolve(dir, type + '.log');
+  const target = path.resolve(dir, type + '.log');
   if (sync || closed) return fs.appendFileSync(target, str);
   getStream(target).write(str);
 };
 
 const log = (level, index, message) => {
-  var config = exports.config;
-  var max = config.level;
+  const config = exports.config;
+  const max = config.level;
   if (max && LEVELS.indexOf(level) > LEVELS.indexOf(max)) return;
-  var iso = (new Date()).toISOString();
-  var name = config.name;
+  const iso = (new Date()).toISOString();
+  const name = config.name;
   if (config.json) {
     return write(level, JSON.stringify({
       '@timestamp': iso,
@@ -74,16 +78,16 @@ const log = (level, index, message) => {
     }));
   }
   message = `${iso} [${name}] ${level.toUpperCase()} ${message}`;
-  var color = !config.dir && config.colors !== false && COLORS[level];
+  const color = !config.dir && config.colors !== false && COLORS[level];
   write(level, color ? color(message) : message);
 };
 
-_.each(LEVELS, function (level, index) {
+_.each(LEVELS, (level, index) => {
   exports[level] = _.partial(log, level, index);
 });
 
-var metric = function (type, name, metric) {
-  var sdc = getSdc();
+const metric = (type, name, metric) => {
+  const sdc = getSdc();
   if (sdc) sdc[SDC_MAP[type]](name, metric);
   if (exports.config.metrics === false) return;
   write('metrics', JSON.stringify({
@@ -101,22 +105,34 @@ exports.gauge = _.partial(metric, 'gauge');
 
 exports.duration = _.partial(metric, 'time');
 
-exports.time = function (cb) {
-  var start = Date.now();
-  cb(function (name) { exports.duration(name, Date.now() - start); });
+exports.time = cb => {
+  const start = Date.now();
+  cb(name => exports.duration(name, Date.now() - start));
 };
 
-exports.sync = function () { sync = true; };
+exports.sync = () => sync = true;
 
-exports.async = function () { if (!closed) sync = false; };
+exports.async = () => { if (!closed) sync = false; };
 
-exports.close = function (cb) {
+exports.close = cb => {
   if (closed) return;
   closed = true;
   sync = true;
-  var completed = 0;
-  var total = Object.keys(streams).length;
-  var done = function () { if (++completed === total && cb) cb(); };
-  for (var name in streams) streams[name].on('finish', done).end();
+  let completed = 0;
+  const total = Object.keys(streams).length;
+  const done = () => { if (++completed === total && cb) cb(); };
+  for (const name in streams) streams[name].on('finish', done).end();
   if (sdc) sdc.close();
+};
+
+// See http://docs.datadoghq.com/api/#events for options.
+exports.event = (data, cb) => {
+  if (!cb) cb = _.noop;
+  const apiKey = exports.config.datadogApiKey;
+  if (!apiKey) return cb();
+  superagent
+    .post(DATADOG_EVENTS_API_URL)
+    .query({api_key: apiKey})
+    .send(data)
+    .end(cb);
 };
